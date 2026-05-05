@@ -81,3 +81,38 @@ class GRPCClient:
     def list_cluster_ids(self) -> list[str]:
         response: dict[str, Any] = self.call(service=f"{PUBLIC_API}.Clusters/List")
         return [item["id"] for item in response.get("items", [])]
+
+    # PublicIPPool operations (private API only)
+
+    def create_public_ip_pool(
+        self,
+        *,
+        name: str,
+        cidrs: list[str],
+        ip_family: str = "IP_FAMILY_IPV4",
+        implementation_strategy: str = "metallb-l2",
+    ) -> str:
+        response: dict[str, Any] = self.call(
+            service=f"{PRIVATE_API}.PublicIPPools/Create",
+            data={
+                "object": {
+                    "metadata": {"name": name},
+                    "spec": {
+                        "cidrs": cidrs,
+                        "ip_family": ip_family,
+                        "implementation_strategy": implementation_strategy,
+                    },
+                }
+            },
+        )
+        return response["object"]["id"]
+
+    def list_public_ip_pool_ids(self) -> list[str]:
+        response: dict[str, Any] = self.call(service=f"{PRIVATE_API}.PublicIPPools/List")
+        return [item["id"] for item in response.get("items", [])]
+
+    def delete_public_ip_pool(self, *, pool_id: str) -> None:
+        self.call(service=f"{PRIVATE_API}.PublicIPPools/Delete", data={"id": pool_id})
+
+    def get_public_ip_pool(self, *, pool_id: str) -> dict[str, Any]:
+        return self.call(service=f"{PRIVATE_API}.PublicIPPools/Get", data={"id": pool_id})

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from tests.core.grpc_client import GRPCClient
 from tests.core.k8s_client import K8sClient
 from tests.core.runner import poll_until
 
@@ -111,6 +112,49 @@ def wait_for_subnet_deletion(*, k8s: K8sClient, name: str) -> None:
         retries=60,
         delay=5,
         description=f"{name} Subnet deletion",
+    )
+
+
+def wait_for_public_ip_pool_cr(*, k8s: K8sClient, uuid: str) -> str:
+    return poll_until(
+        fn=lambda: k8s.get_public_ip_pool_name(uuid=uuid, checked=False),
+        until=lambda v: v != "",
+        retries=30,
+        delay=2,
+        description=f"PublicIPPool CR for {uuid}",
+    )
+
+
+def wait_for_public_ip_pool_ready(*, k8s: K8sClient, name: str) -> None:
+    poll_until(
+        fn=lambda: k8s.get_public_ip_pool_phase(name=name, checked=False),
+        until=lambda v: v == "Ready",
+        retries=60,
+        delay=5,
+        description=f"{name} PublicIPPool Ready",
+    )
+
+
+def wait_for_public_ip_pool_api_ready(*, grpc: GRPCClient, pool_id: str) -> None:
+    poll_until(
+        fn=lambda: grpc.get_public_ip_pool(pool_id=pool_id)
+        .get("object", {})
+        .get("status", {})
+        .get("state", ""),
+        until=lambda v: v == "PUBLIC_IP_POOL_STATE_READY",
+        retries=60,
+        delay=5,
+        description=f"PublicIPPool {pool_id} API READY",
+    )
+
+
+def wait_for_public_ip_pool_deletion(*, k8s: K8sClient, name: str) -> None:
+    poll_until(
+        fn=lambda: not k8s.is_present(resource="publicippool", name=name),
+        until=lambda v: v is True,
+        retries=60,
+        delay=5,
+        description=f"{name} PublicIPPool deletion",
     )
 
 
